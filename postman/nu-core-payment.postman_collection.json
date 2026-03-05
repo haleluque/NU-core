@@ -1,0 +1,154 @@
+{
+  "info": {
+    "name": "nu.core Payment API",
+    "description": "API for payment transfers. Run the app on port 8080 and seed accounts (Alice, Bob, Carol) before testing.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "originAccountId",
+      "value": "11111111-1111-1111-1111-111111111111"
+    },
+    {
+      "key": "destinationAccountId",
+      "value": "22222222-2222-2222-2222-222222222222"
+    },
+    {
+      "key": "amount",
+      "value": "100.50"
+    },
+    {
+      "key": "transferId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Get transfer by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments/transfers/{{transferId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "payments", "transfers", "{{transferId}}"]
+        },
+        "description": "Get a transfer by its ID. Set transferId variable (e.g. from a previous transfer response). Returns 404 if not found."
+      }
+    },
+    {
+      "name": "Transfer",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"originAccountId\": \"{{originAccountId}}\",\n  \"destinationAccountId\": \"{{destinationAccountId}}\",\n  \"amount\": {{amount}}\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments/transfer",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "payments", "transfer"]
+        },
+        "description": "Transfer amount from origin to destination account. Uses seeded accounts: Alice (111...), Bob (222...), Carol (333...)."
+      }
+    },
+    {
+      "name": "Transfer (Alice → Bob)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"originAccountId\": \"11111111-1111-1111-1111-111111111111\",\n  \"destinationAccountId\": \"22222222-2222-2222-2222-222222222222\",\n  \"amount\": 100.50\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments/transfer",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "payments", "transfer"]
+        },
+        "description": "Transfer 100.50 from Alice to Bob (using seeded account IDs)."
+      }
+    },
+    {
+      "name": "Transfer (Bob → Carol)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"originAccountId\": \"22222222-2222-2222-2222-222222222222\",\n  \"destinationAccountId\": \"33333333-3333-3333-3333-333333333333\",\n  \"amount\": 50.25\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments/transfer",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "payments", "transfer"]
+        },
+        "description": "Transfer 50.25 from Bob to Carol."
+      }
+    },
+    {
+      "name": "Transfer (invalid – negative amount)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"originAccountId\": \"11111111-1111-1111-1111-111111111111\",\n  \"destinationAccountId\": \"22222222-2222-2222-2222-222222222222\",\n  \"amount\": -10\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments/transfer",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "payments", "transfer"]
+        },
+        "description": "Expect 400: amount must be >= 0.01."
+      }
+    },
+    {
+      "name": "Transfer (invalid – unknown account)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"originAccountId\": \"00000000-0000-0000-0000-000000000000\",\n  \"destinationAccountId\": \"22222222-2222-2222-2222-222222222222\",\n  \"amount\": 100\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments/transfer",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "payments", "transfer"]
+        },
+        "description": "Expect error: origin account not found."
+      }
+    }
+  ]
+}

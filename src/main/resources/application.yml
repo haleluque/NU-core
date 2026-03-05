@@ -1,0 +1,23 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: nu.core
+  kafka:
+    # Port 29092 = EXTERNAL listener (host). Containers use kafka:9092
+    bootstrap-servers: localhost:29092
+    consumer:
+      group-id: nu-core-payment
+      auto-offset-reset: latest
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+# LocalStack (DynamoDB): use empty endpoint in production (real AWS)
+aws:
+  region: us-east-1
+  dynamodb:
+    endpoint: http://localhost:4566
+    access-key-id: test
+    secret-access-key: test
