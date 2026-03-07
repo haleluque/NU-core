@@ -1,6 +1,36 @@
 {
   "properties": [
     {
+      "name": "app.payment.kafka.topic-payment-events",
+      "type": "java.lang.String",
+      "description": "Kafka topic for payment events (outbound to risk engine).",
+      "defaultValue": "payment-events"
+    },
+    {
+      "name": "app.payment.kafka.topic-risk-events",
+      "type": "java.lang.String",
+      "description": "Kafka topic for risk engine responses.",
+      "defaultValue": "risk-events"
+    },
+    {
+      "name": "app.payment.kafka.topic-payment-completed",
+      "type": "java.lang.String",
+      "description": "Kafka topic for payment completed events.",
+      "defaultValue": "payment.completed"
+    },
+    {
+      "name": "app.payment.metrics.payments-processed-total",
+      "type": "java.lang.String",
+      "description": "Micrometer counter name for total risk responses processed.",
+      "defaultValue": "payments.processed.total"
+    },
+    {
+      "name": "app.payment.metrics.payments-compensated-total",
+      "type": "java.lang.String",
+      "description": "Micrometer counter name for total compensations (rejected by risk).",
+      "defaultValue": "payments.compensated.total"
+    },
+    {
       "name": "aws.region",
       "type": "java.lang.String",
       "description": "AWS region (e.g. us-east-1).",

@@ -7,6 +7,9 @@ import com.haleluque.nu.core.payment.application.port.out.TransactionRepository;
 import com.haleluque.nu.core.payment.domain.model.Account;
 import com.haleluque.nu.core.payment.domain.model.Transaction;
 import com.haleluque.nu.core.payment.infrastructure.adapter.input.messaging.dto.RiskEventPayload;
+import com.haleluque.nu.core.payment.infrastructure.config.PaymentAppProperties;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -24,23 +27,31 @@ import java.util.UUID;
 public class RiskResponseConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(RiskResponseConsumer.class);
-    private static final String TOPIC_RISK_EVENTS = "risk-events";
 
     private final ObjectMapper objectMapper;
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
+    private final PaymentAppProperties appProperties;
+    private final Counter processedCounter;
+    private final Counter compensatedCounter;
 
     public RiskResponseConsumer(TransactionRepository transactionRepository,
                                 AccountRepository accountRepository,
-                                ObjectMapper objectMapper) {
+                                ObjectMapper objectMapper,
+                                MeterRegistry meterRegistry,
+                                PaymentAppProperties appProperties) {
         this.transactionRepository = transactionRepository;
         this.accountRepository = accountRepository;
         this.objectMapper = objectMapper != null ? objectMapper : new ObjectMapper().registerModule(new JavaTimeModule());
+        this.appProperties = appProperties;
+        this.processedCounter = meterRegistry.counter(appProperties.getMetrics().getPaymentsProcessedTotal());
+        this.compensatedCounter = meterRegistry.counter(appProperties.getMetrics().getPaymentsCompensatedTotal());
     }
 
-    @KafkaListener(topics = TOPIC_RISK_EVENTS, groupId = "nu-core-payment-risk-response")
+    @KafkaListener(topics = "${app.payment.kafka.topic-risk-events:risk-events}", groupId = "nu-core-payment-risk-response")
     public void consume(String message) {
-        log.info("Received risk response from topic {}: {}", TOPIC_RISK_EVENTS, message);
+        String topic = appProperties.getKafka().getTopicRiskEvents();
+        log.info("Received risk response from topic {}: {}", topic, message);
 
         RiskEventPayload payload = parsePayload(message);
         if (payload == null) {
@@ -54,8 +65,10 @@ public class RiskResponseConsumer {
         }
 
         if (RiskEventPayload.APPROVED.equalsIgnoreCase(payload.status())) {
+            processedCounter.increment();
             handleApproved(transactionId);
         } else if (RiskEventPayload.REJECTED.equalsIgnoreCase(payload.status())) {
+            processedCounter.increment();
             handleRejected(transactionId, payload);
         } else {
             log.warn("Unknown risk status '{}' for transactionId={}, ignoring", payload.status(), transactionId);
@@ -95,6 +108,8 @@ public class RiskResponseConsumer {
 
         Transaction cancelled = tx.withStatus(Transaction.CANCELLED_BY_RISK);
         transactionRepository.save(cancelled);
+
+        compensatedCounter.increment();
 
         log.info("Compensation applied for transaction {}: account {} credited {}, transaction status CANCELLED_BY_RISK (reason: {})",
                 transactionId, tx.accountId(), tx.amount(), payload.reason());

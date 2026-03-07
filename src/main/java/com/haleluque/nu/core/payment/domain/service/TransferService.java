@@ -1,5 +1,6 @@
 package com.haleluque.nu.core.payment.domain.service;
 
+import com.haleluque.nu.core.payment.application.exception.InsufficientBalanceException;
 import com.haleluque.nu.core.payment.application.port.out.AccountRepository;
 import com.haleluque.nu.core.payment.domain.model.Account;
 
@@ -33,6 +34,9 @@ public final class TransferService {
         Account destination = accountRepository.findById(destinationAccountId)
                 .orElseThrow(() -> new IllegalArgumentException("Destination account not found: " + destinationAccountId));
 
+        if (origin.balance().compareTo(amount) < 0) {
+            throw new InsufficientBalanceException();
+        }
         Account debitedOrigin = origin.debit(amount);
         Account creditedDestination = destination.credit(amount);
 

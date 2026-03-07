@@ -1,6 +1,17 @@
 server:
   port: 8080
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+    prometheus:
+      access: unrestricted
+
 spring:
   application:
     name: nu.core
@@ -13,6 +24,17 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+# Payment module: Kafka topics and metric names
+app:
+  payment:
+    kafka:
+      topic-payment-events: payment-events
+      topic-risk-events: risk-events
+      topic-payment-completed: payment.completed
+    metrics:
+      payments-processed-total: payments.processed.total
+      payments-compensated-total: payments.compensated.total
 
 # LocalStack (DynamoDB): use empty endpoint in production (real AWS)
 aws:

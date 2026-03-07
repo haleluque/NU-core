@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.haleluque.nu.core.payment.infrastructure.adapter.output.messaging.dto.TransactionEvent;
+import com.haleluque.nu.core.payment.infrastructure.config.PaymentAppProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
@@ -21,19 +21,17 @@ import java.util.Objects;
 public class PaymentEventProducer {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentEventProducer.class);
-    private static final String TOPIC_PAYMENT_EVENTS = "payment-events";
 
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final PaymentAppProperties appProperties;
 
-    @Autowired
-    public PaymentEventProducer(KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper) {
+    public PaymentEventProducer(KafkaTemplate<String, String> kafkaTemplate,
+                                ObjectMapper objectMapper,
+                                PaymentAppProperties appProperties) {
         this.kafkaTemplate = kafkaTemplate;
         this.objectMapper = objectMapper == null ? defaultObjectMapper() : objectMapper;
-    }
-
-    public PaymentEventProducer(KafkaTemplate<String, String> kafkaTemplate) {
-        this(kafkaTemplate, null);
+        this.appProperties = appProperties;
     }
 
     private static ObjectMapper defaultObjectMapper() {
@@ -47,17 +45,19 @@ public class PaymentEventProducer {
      */
     public void sendTransactionEvent(@NonNull TransactionEvent event) {
         try {
+            String topic = Objects.requireNonNull(appProperties.getKafka().getTopicPaymentEvents(), "topicPaymentEvents");
             String payload = objectMapper.writeValueAsString(event);
             String key = Objects.requireNonNull(event.transactionId(), "transactionId");
-            kafkaTemplate.send(TOPIC_PAYMENT_EVENTS, key, payload);
+            kafkaTemplate.send(topic, key, payload);
             log.info("Transaction event sent to {}: transactionId={}, accountId={}, amount={}, status={}",
-                    TOPIC_PAYMENT_EVENTS, event.transactionId(), event.accountId(), event.amount(), event.status());
+                    topic, event.transactionId(), event.accountId(), event.amount(), event.status());
         } catch (JsonProcessingException e) {
             log.error("Failed to serialize TransactionEvent for transactionId={}", event.transactionId(), e);
         }
     }
 
     public void sendPaymentCompleted(@NonNull String key, @NonNull String payload) {
-        kafkaTemplate.send("payment.completed", key, payload);
+        String topic = Objects.requireNonNull(appProperties.getKafka().getTopicPaymentCompleted(), "topicPaymentCompleted");
+        kafkaTemplate.send(topic, key, payload);
     }
 }
