@@ -12,6 +12,8 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
+import java.util.Objects;
+
 /**
  * Output adapter: Kafka producer for payment events.
  */
@@ -46,7 +48,8 @@ public class PaymentEventProducer {
     public void sendTransactionEvent(@NonNull TransactionEvent event) {
         try {
             String payload = objectMapper.writeValueAsString(event);
-            kafkaTemplate.send(TOPIC_PAYMENT_EVENTS, event.transactionId(), payload);
+            String key = Objects.requireNonNull(event.transactionId(), "transactionId");
+            kafkaTemplate.send(TOPIC_PAYMENT_EVENTS, key, payload);
             log.info("Transaction event sent to {}: transactionId={}, accountId={}, amount={}, status={}",
                     TOPIC_PAYMENT_EVENTS, event.transactionId(), event.accountId(), event.amount(), event.status());
         } catch (JsonProcessingException e) {
