@@ -1,0 +1,22 @@
+# Service ClusterIP (internal communication) + NodePort for external access (Minikube).
+# For Minikube: minikube service nu-payment-service --url
+apiVersion: v1
+kind: Service
+metadata:
+  name: nu-payment-service
+  namespace: default
+  labels:
+    app: nu-payment-service
+    app.kubernetes.io/name: nu-payment-service
+    app.kubernetes.io/part-of: nu-core
+spec:
+  type: NodePort
+  selector:
+    app: nu-payment-service
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+      nodePort: 30080
+  sessionAffinity: None

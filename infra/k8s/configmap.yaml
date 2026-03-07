@@ -1,0 +1,21 @@
+# ConfigMap: environment variables for Kafka (in-cluster) and LocalStack.
+# Adjust the values according to your Kafka and LocalStack deployment in the cluster.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nu-app-config
+  namespace: default
+  labels:
+    app.kubernetes.io/part-of: nu-core
+data:
+  # Kafka (service inside the cluster; example: release 'kafka' in namespace 'kafka')
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka-bootstrap.kafka.svc.cluster.local:9092"
+  # LocalStack / DynamoDB (adjust host if LocalStack is in another namespace)
+  AWS_DYNAMODB_ENDPOINT: "http://localstack.default.svc.cluster.local:4566"
+  AWS_REGION: "us-east-1"
+  # Credentials DynamoDB/LocalStack (in production use Secret and AWS real)
+  AWS_DYNAMODB_ACCESS_KEY_ID: "test"
+  AWS_DYNAMODB_SECRET_ACCESS_KEY: "test"
+  # Spring Boot: enable liveness/readiness for Kubernetes probes (nu-payment-service & nu-risk-engine)
+  MANAGEMENT_HEALTH_LIVENESSSTATE_ENABLED: "true"
+  MANAGEMENT_HEALTH_READINESSSTATE_ENABLED: "true"

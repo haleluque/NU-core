@@ -1,0 +1,20 @@
+# Service ClusterIP: internal communication only within the cluster.
+apiVersion: v1
+kind: Service
+metadata:
+  name: nu-risk-engine
+  namespace: default
+  labels:
+    app: nu-risk-engine
+    app.kubernetes.io/name: nu-risk-engine
+    app.kubernetes.io/part-of: nu-core
+spec:
+  type: ClusterIP
+  selector:
+    app: nu-risk-engine
+  ports:
+    - name: http
+      port: 8081
+      targetPort: http
+      protocol: TCP
+  sessionAffinity: None
