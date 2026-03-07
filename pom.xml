@@ -28,6 +28,8 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+		<!-- Docker Desktop 29.x returns 400 for /info with Testcontainers 1.20.x; 1.21.4+ fixes it (see testcontainers/testcontainers-java#11422) -->
+		<testcontainers.version>1.21.4</testcontainers.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -72,8 +74,38 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webflux</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework.kafka</groupId>
 			<artifactId>spring-kafka-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-testcontainers</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>kafka</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>localstack</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.awaitility</groupId>
+			<artifactId>awaitility</artifactId>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
@@ -81,6 +113,22 @@
 	<build>
 		<sourceDirectory>src/main/java</sourceDirectory>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<!-- Testcontainers: TCP + no proxy for localhost (Docker Desktop can return 400 if request goes via proxy). -->
+					<environmentVariables>
+						<DOCKER_HOST>tcp://localhost:2375</DOCKER_HOST>
+						<NO_PROXY>localhost,127.0.0.1</NO_PROXY>
+						<no_proxy>localhost,127.0.0.1</no_proxy>
+					</environmentVariables>
+					<systemPropertyVariables>
+						<http.nonProxyHosts>localhost|127.0.0.1</http.nonProxyHosts>
+						<https.nonProxyHosts>localhost|127.0.0.1</https.nonProxyHosts>
+					</systemPropertyVariables>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>

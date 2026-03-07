@@ -6,6 +6,7 @@ import com.haleluque.nu.core.payment.application.port.in.TransferPort;
 import com.haleluque.nu.core.payment.application.usecase.TransferUseCase;
 import com.haleluque.nu.core.payment.domain.service.TransferService;
 import com.haleluque.nu.core.payment.infrastructure.adapter.output.messaging.PaymentEventProducer;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,7 +26,8 @@ public class PaymentConfig {
     @Bean
     public TransferPort transferPort(TransferService transferService,
                                     TransactionRepository transactionRepository,
-                                    PaymentEventProducer paymentEventProducer) {
-        return new TransferUseCase(transferService, transactionRepository, paymentEventProducer);
+                                    PaymentEventProducer paymentEventProducer,
+                                    MeterRegistry meterRegistry) {
+        return new TransferUseCase(transferService, transactionRepository, paymentEventProducer, meterRegistry);
     }
 }

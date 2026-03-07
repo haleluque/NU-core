@@ -32,8 +32,8 @@ public class RiskResponseConsumer {
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
     private final PaymentAppProperties appProperties;
+    private final MeterRegistry meterRegistry;
     private final Counter processedCounter;
-    private final Counter compensatedCounter;
 
     public RiskResponseConsumer(TransactionRepository transactionRepository,
                                 AccountRepository accountRepository,
@@ -44,8 +44,8 @@ public class RiskResponseConsumer {
         this.accountRepository = accountRepository;
         this.objectMapper = objectMapper != null ? objectMapper : new ObjectMapper().registerModule(new JavaTimeModule());
         this.appProperties = appProperties;
+        this.meterRegistry = meterRegistry;
         this.processedCounter = meterRegistry.counter(appProperties.getMetrics().getPaymentsProcessedTotal());
-        this.compensatedCounter = meterRegistry.counter(appProperties.getMetrics().getPaymentsCompensatedTotal());
     }
 
     @KafkaListener(topics = "${app.payment.kafka.topic-risk-events:risk-events}", groupId = "nu-core-payment-risk-response")
@@ -109,7 +109,7 @@ public class RiskResponseConsumer {
         Transaction cancelled = tx.withStatus(Transaction.CANCELLED_BY_RISK);
         transactionRepository.save(cancelled);
 
-        compensatedCounter.increment();
+        meterRegistry.counter(appProperties.getMetrics().getPaymentsCompensatedTotal(), "reason", "fraud").increment();
 
         log.info("Compensation applied for transaction {}: account {} credited {}, transaction status CANCELLED_BY_RISK (reason: {})",
                 transactionId, tx.accountId(), tx.amount(), payload.reason());

@@ -9,6 +9,7 @@ import com.haleluque.nu.core.payment.domain.model.Transaction;
 import com.haleluque.nu.core.payment.domain.service.TransferService;
 import com.haleluque.nu.core.payment.infrastructure.adapter.output.messaging.PaymentEventProducer;
 import com.haleluque.nu.core.payment.infrastructure.adapter.output.messaging.dto.TransactionEvent;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,20 +24,27 @@ public final class TransferUseCase implements TransferPort {
 
     private static final Logger log = LoggerFactory.getLogger(TransferUseCase.class);
 
+    private static final String METRIC_PROCESSED_TOTAL = "payments.processed.total";
+
     private final TransferService transferService;
     private final TransactionRepository transactionRepository;
     private final PaymentEventProducer paymentEventProducer;
+    private final MeterRegistry meterRegistry;
 
     public TransferUseCase(TransferService transferService,
                            TransactionRepository transactionRepository,
-                           PaymentEventProducer paymentEventProducer) {
+                           PaymentEventProducer paymentEventProducer,
+                           MeterRegistry meterRegistry) {
         this.transferService = transferService;
         this.transactionRepository = transactionRepository;
         this.paymentEventProducer = paymentEventProducer;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
     public TransferResult transfer(TransferCommand command) {
+        meterRegistry.counter(METRIC_PROCESSED_TOTAL, "status", "initiated").increment();
+
         transferService.transfer(
                 command.originAccountId(),
                 command.destinationAccountId(),
