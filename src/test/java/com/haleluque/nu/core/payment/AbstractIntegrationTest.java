@@ -3,10 +3,10 @@ package com.haleluque.nu.core.payment;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -35,10 +35,12 @@ public abstract class AbstractIntegrationTest {
     private static final String TRANSACTIONS_TABLE = "nu-core-payment-transactions";
 
     @Container
-    protected static final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"))
+    @SuppressWarnings("resource") // Managed by Testcontainers/JUnit, not manually closed here.
+    protected static final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("apache/kafka:3.9.2"))
             .withReuse(true);
 
     @Container
+    @SuppressWarnings("resource") // Managed by Testcontainers/JUnit, not manually closed here.
     protected static final LocalStackContainer localStack = new LocalStackContainer(
             DockerImageName.parse("localstack/localstack:3.0")
                     .asCompatibleSubstituteFor("localstack/localstack"))

@@ -1,0 +1,163 @@
+# =============================================================================
+# K8s Infrastructure: LocalStack (DynamoDB) + Kafka (KRaft)
+# Services: localstack (4566), kafka (9092)
+# Kafka runs in KRaft mode and does not require Zookeeper. Apps use bootstrap
+# server kafka:9092 (see configmap).
+# Apply this file first; then configmap and deployments for nu-core.
+# =============================================================================
+
+---
+# -----------------------------------------------------------------------------
+# LocalStack (DynamoDB)
+# -----------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: localstack
+  namespace: nucore-lab
+  labels:
+    app: localstack
+    app.kubernetes.io/part-of: nu-core
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: localstack
+  template:
+    metadata:
+      labels:
+        app: localstack
+        app.kubernetes.io/part-of: nu-core
+    spec:
+      containers:
+        - name: localstack
+          image: localstack/localstack:3.0
+          ports:
+            - containerPort: 4566
+          env:
+            - name: SERVICES
+              value: "dynamodb"
+            - name: DEBUG
+              value: "1"
+            - name: GATEWAY_LISTEN
+              value: "0.0.0.0:4566"
+            - name: USE_SSL
+              value: "0"
+            - name: HOSTNAME_EXTERNAL
+              value: "localstack"
+            - name: LOCALSTACK_HOST
+              value: "0.0.0.0"
+            # En K8s suele usarse modo 'lite'; descomentar si LocalStack lo requiere
+            # - name: DOCKER_HOST
+            #   value: "unix:///var/run/docker.sock"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /_localstack/health
+              port: 33773
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 24
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: localstack
+  namespace: nucore-lab
+  labels:
+    app: localstack
+    app.kubernetes.io/part-of: nu-core
+spec:
+  type: ClusterIP
+  selector:
+    app: localstack
+  ports:
+    - name: gateway
+      port: 4566
+      # LocalStack 3.0 sometimes binds to a dynamic port; use the same for targetPort if 4566 not used in container
+      targetPort: 33773
+      protocol: TCP
+---
+# -----------------------------------------------------------------------------
+# Kafka (Apache Kafka KRaft mode; no Zookeeper; internal communication)
+# -----------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka
+  namespace: nucore-lab
+  labels:
+    app: kafka
+    app.kubernetes.io/part-of: nu-core
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+        app.kubernetes.io/part-of: nu-core
+    spec:
+      containers:
+        - name: kafka
+          image: apache/kafka:3.9.2
+          ports:
+            - containerPort: 9092
+            - containerPort: 9093
+          env:
+            - name: KAFKA_NODE_ID
+              value: "1"
+            - name: KAFKA_PROCESS_ROLES
+              value: "broker,controller"
+            - name: KAFKA_LISTENERS
+              value: "PLAINTEXT://:9092,CONTROLLER://:9093"
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: "PLAINTEXT://kafka:9092"
+            - name: KAFKA_CONTROLLER_LISTENER_NAMES
+              value: "CONTROLLER"
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+              value: "1@localhost:9093"
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
+            - name: KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS
+              value: "0"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: nucore-lab
+  labels:
+    app: kafka
+    app.kubernetes.io/part-of: nu-core
+spec:
+  type: ClusterIP
+  selector:
+    app: kafka
+  ports:
+    - name: kafka
+      port: 9092
+      targetPort: 9092
+      protocol: TCP

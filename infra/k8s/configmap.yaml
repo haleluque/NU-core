@@ -4,14 +4,17 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: nu-app-config
-  namespace: default
+  namespace: nucore-lab
   labels:
     app.kubernetes.io/part-of: nu-core
 data:
-  # Kafka (service inside the cluster; example: release 'kafka' in namespace 'kafka')
-  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka-bootstrap.kafka.svc.cluster.local:9092"
-  # LocalStack / DynamoDB (adjust host if LocalStack is in another namespace)
-  AWS_DYNAMODB_ENDPOINT: "http://localstack.default.svc.cluster.local:4566"
+  # Profile to load application-kubernetes.yml (LocalStack and Kafka in the cluster)
+  SPRING_PROFILES_ACTIVE: "kubernetes"
+  # Kafka (service from k8s-infrastructure.yaml: kafka:9092 in nucore-lab namespace)
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka.nucore-lab.svc.cluster.local:9092"
+  # LocalStack / DynamoDB — service name in k8s-infrastructure.yaml (port 4566)
+  # Same namespace: use "localstack" or "localstack.nucore-lab.svc.cluster.local"
+  AWS_DYNAMODB_ENDPOINT: "http://localstack:4566"
   AWS_REGION: "us-east-1"
   # Credentials DynamoDB/LocalStack (in production use Secret and AWS real)
   AWS_DYNAMODB_ACCESS_KEY_ID: "test"

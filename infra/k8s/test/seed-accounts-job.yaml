@@ -1,0 +1,38 @@
+# Job: insert default accounts (Alice, Bob, Carol) into DynamoDB in LocalStack.
+# Run after tables exist: kubectl apply -f seed-accounts-job.yaml -n nucore-lab
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: seed-accounts
+  namespace: nucore-lab
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: aws-cli
+          image: amazon/aws-cli:2.21.0
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              value: "test"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "test"
+            - name: AWS_DEFAULT_REGION
+              value: "us-east-1"
+            - name: AWS_DYNAMODB_ENDPOINT
+              value: "http://localstack:4566"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              echo "Waiting 15s for network..."
+              sleep 15
+              ENDPOINT="${AWS_DYNAMODB_ENDPOINT}"
+              echo "Seeding accounts at $ENDPOINT"
+              aws dynamodb put-item --endpoint-url "$ENDPOINT" --region us-east-1 --table-name nu-core-payment-accounts --item '{"id":{"S":"11111111-1111-1111-1111-111111111111"},"customerName":{"S":"Alice"},"balance":{"N":"5000.00"}}' || true
+              aws dynamodb put-item --endpoint-url "$ENDPOINT" --region us-east-1 --table-name nu-core-payment-accounts --item '{"id":{"S":"22222222-2222-2222-2222-222222222222"},"customerName":{"S":"Bob"},"balance":{"N":"3000.50"}}' || true
+              aws dynamodb put-item --endpoint-url "$ENDPOINT" --region us-east-1 --table-name nu-core-payment-accounts --item '{"id":{"S":"33333333-3333-3333-3333-333333333333"},"customerName":{"S":"Carol"},"balance":{"N":"10000.00"}}' || true
+              echo "Done."
+  backoffLimit: 2

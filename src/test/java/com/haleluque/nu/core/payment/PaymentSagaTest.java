@@ -71,8 +71,8 @@ class PaymentSagaTest extends AbstractIntegrationTest {
                 "fraud",
                 Instant.now()
         );
-        String payload = Objects.requireNonNull(objectMapper.writeValueAsString(rejection), "serialized payload");
-        kafkaTemplate.send(topicRiskEvents, payload);
+        String payload = objectMapper.writeValueAsString(rejection);
+        kafkaTemplate.send(Objects.requireNonNull(topicRiskEvents, "topicRiskEvents"), payload);
 
         await()
                 .atMost(15, TimeUnit.SECONDS)

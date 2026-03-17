@@ -1,13 +1,13 @@
 # NU CORE
 
-Servicio de pagos que orquesta transferencias entre cuentas, persiste en DynamoDB y publica eventos en Kafka para validación de riesgo (saga). Incluye compensación automática cuando el motor de riesgo rechaza la operación.
+Payment service that orchestrates transfers between accounts, persists to DynamoDB, and publishes events to Kafka for risk validation (saga). Includes automatic compensation when the risk engine rejects the operation.
 
 ---
 
-## Stack y versiones
+## Stack and versions
 
-| Componente | Versión |
-|------------|---------|
+| Component | Version |
+|-----------|---------|
 | **Java** | 21 |
 | **Spring Boot** | 3.4.5 |
 | **Spring Kafka** | (managed by Boot) |
@@ -16,164 +16,164 @@ Servicio de pagos que orquesta transferencias entre cuentas, persiste en DynamoD
 | **Testcontainers** | 1.21.4 |
 | **Awaitility** | (managed by Boot) |
 
-Imágenes Testcontainers:
+Testcontainers images:
 
-- **Kafka:** `confluentinc/cp-kafka:7.6.0`
+- **Kafka:** `apache/kafka:3.9.2` (KRaft mode; same image as Docker Compose and Kubernetes)
 - **LocalStack (DynamoDB):** `localstack/localstack:3.0`
 
 ---
 
-## Requisitos
+## Requirements
 
 - **JDK 21**
 - **Maven 3.9+**
-- **Docker** (para tests de integración con Testcontainers)
-- **Docker Desktop (Windows):** activar *"Expose daemon on tcp://localhost:2375 without TLS"* (Settings → General) para que los tests de integración conecten correctamente.
+- **Docker** (for integration tests with Testcontainers)
+- **Docker Desktop (Windows):** enable *"Expose daemon on tcp://localhost:2375 without TLS"* (Settings → General) so integration tests can connect correctly.
 
-Para desarrollo local sin Testcontainers:
+For local development without Testcontainers:
 
-- **Kafka** en `localhost:29092` (o configurar `spring.kafka.bootstrap-servers`)
-- **LocalStack** en `http://localhost:4566` para DynamoDB (o endpoint vacío para AWS real)
+- **Kafka** at `localhost:29092` (or set `spring.kafka.bootstrap-servers`)
+- **LocalStack** at `http://localhost:4566` for DynamoDB (or leave endpoint empty for real AWS)
 
 ---
 
-## Cómo arrancar la aplicación
+## How to run the application
 
-Este proyecto está compuesto por 2 microservicios:
+This project is made up of 2 microservices:
 
-- **core** (puerto **8080**): orquesta transferencias y gestiona compensaciones.
-- **engine** (puerto **8081**): valida límites y reglas de riesgo.
+- **core** (port **8080**): orchestrates transfers and handles compensation.
+- **engine** (port **8081**): validates limits and risk rules.
 
-Para iniciar cada uno localmente:
+To start each one locally:
 
-### Arrancar `core` (8080)
+### Start `core` (8080)
 
 ```bash
 cd nu.core
 mvn spring-boot:run
 ```
 
-La API de core queda en **http://localhost:8080**.
+The core API is available at **http://localhost:8080**.
 
-### Arrancar `engine` (8081)
+### Start `engine` (8081)
 
-_Asumiendo que el módulo/codebase de engine también está disponible localmente:_
+_Assuming the engine module/codebase is also available locally:_
 
 ```bash
 cd nu.engine
 mvn spring-boot:run
 ```
 
-La API del engine queda en **http://localhost:8081**.
+The engine API is available at **http://localhost:8081**.
 
 ---
 
-## Cómo funcionan los tests
+## How the tests work
 
-### Tipos de test
+### Test types
 
-1. **Tests unitarios / contexto**  
-   - **`ApplicationTests`**: carga el contexto de Spring. No usa Docker ni Kafka/DynamoDB reales (puede fallar si Kafka no está disponible en `localhost:29092` según `application.yml`).
+1. **Unit / context tests**  
+   - **`ApplicationTests`**: loads the Spring context. Does not use Docker or real Kafka/DynamoDB (may fail if Kafka is not available at `localhost:29092` per `application.yml`).
 
-2. **Tests de integración (Testcontainers)**  
-   - **`PaymentSagaTest`**: extiende `AbstractIntegrationTest`.  
-   - Levanta **Kafka** y **LocalStack (DynamoDB)** en contenedores (una vez por suite).  
-   - Usa **WebTestClient** para llamar al API de pagos y **Kafka** para simular el rechazo del motor de riesgo; con **Awaitility** comprueba que el saldo en DynamoDB vuelve al valor original (compensación).
+2. **Integration tests (Testcontainers)**  
+   - **`PaymentSagaTest`**: extends `AbstractIntegrationTest`.  
+   - Starts **Kafka** and **LocalStack (DynamoDB)** in containers (once per suite).  
+   - Uses **WebTestClient** to call the payment API and **Kafka** to simulate risk engine rejection; with **Awaitility** it asserts that the balance in DynamoDB returns to the original value (compensation).
 
-### Flujo de `PaymentSagaTest`
+### `PaymentSagaTest` flow
 
-1. **Preparación:** `AbstractIntegrationTest` inicia Kafka y LocalStack, crea las tablas DynamoDB y hace seed de cuentas (Alice, Bob).
+1. **Setup:** `AbstractIntegrationTest` starts Kafka and LocalStack, creates DynamoDB tables and seeds accounts (Alice, Bob).
 2. **Test:**  
-   - Se obtiene el saldo inicial de la cuenta origen.  
-   - Se envía un **POST** a `/api/v1/payments/transfer`.  
-   - Se simula un mensaje de **rechazo** en el topic `risk-events` (como si lo enviara el microservicio de riesgo).  
-   - Con **Awaitility** se espera (hasta 15 s) a que el saldo de la cuenta origen en DynamoDB coincida de nuevo con el inicial (compensación aplicada).
+   - Get initial balance of the source account.  
+   - Send a **POST** to `/api/v1/payments/transfer`.  
+   - Simulate a **rejection** message on the `risk-events` topic (as if sent by the risk microservice).  
+   - With **Awaitility**, wait (up to 15 s) for the source account balance in DynamoDB to match the initial value again (compensation applied).
 
-### Qué revisar para verificar que todo funciona
+### What to check to verify everything works
 
 - **Docker:**  
-  - `docker info` debe responder bien.  
-  - Si usas TCP 2375: `$env:DOCKER_HOST="tcp://localhost:2375"; docker info` (PowerShell).
-- **Tests de integración:**  
-  - `mvn clean test -Dtest=PaymentSagaTest` debe terminar en **BUILD SUCCESS** y *Tests run: 1, Failures: 0, Errors: 0*.
-- **Aplicación local:**  
+  - `docker info` should succeed.  
+  - If using TCP 2375: `$env:DOCKER_HOST="tcp://localhost:2375"; docker info` (PowerShell).
+- **Integration tests:**  
+  - `mvn clean test -Dtest=PaymentSagaTest` should finish with **BUILD SUCCESS** and *Tests run: 1, Failures: 0, Errors: 0*.
+- **Local application:**  
   - Health: `GET http://localhost:8080/actuator/health`  
-  - Métricas: `GET http://localhost:8080/actuator/prometheus` (contadores `payments.processed.total`, `payments.compensated.total`).
+  - Metrics: `GET http://localhost:8080/actuator/prometheus` (counters `payments.processed.total`, `payments.compensated.total`).
 - **LocalStack/DynamoDB:**  
-  - Tablas creadas (ver sección de comandos).  
-  - Cuentas con saldo esperado tras seed (Alice, Bob, Carol si usaste el script de seed).
+  - Tables created (see commands section).  
+  - Accounts with expected balance after seed (Alice, Bob, Carol if you used the seed script).
 
-Documentación adicional de tests de integración: [docs/INTEGRATION_TESTS.md](docs/INTEGRATION_TESTS.md).
-
----
-
-## Configuración principal
-
-En `src/main/resources/application.yml`:
-
-- **Server:** puerto `8080`.
-- **Actuator:** endpoints `health` y `prometheus` expuestos.
-- **Kafka:** `bootstrap-servers`, consumer group, producer (por defecto `localhost:29092`).
-- **Tópicos (app.payment.kafka):** `payment-events`, `risk-events`, `payment.completed`.
-- **Métricas (app.payment.metrics):** nombres de los contadores de pagos procesados y compensados.
-- **AWS/DynamoDB:** región, endpoint (p. ej. `http://localhost:4566` para LocalStack), credenciales de prueba.
+Additional integration test docs: [docs/INTEGRATION_TESTS.md](docs/INTEGRATION_TESTS.md).
 
 ---
 
-## API de ejemplo
+## Main configuration
+
+In `src/main/resources/application.yml`:
+
+- **Server:** port `8080`.
+- **Actuator:** `health` and `prometheus` endpoints exposed.
+- **Kafka:** `bootstrap-servers`, consumer group, producer (default `localhost:29092`).
+- **Topics (app.payment.kafka):** `payment-events`, `risk-events`, `payment.completed`.
+- **Metrics (app.payment.metrics):** names of processed and compensated payment counters.
+- **AWS/DynamoDB:** region, endpoint (e.g. `http://localhost:4566` for LocalStack), test credentials.
+
+---
+
+## Example API
 
 - **POST** `/api/v1/payments/transfer`  
   - Body: `{ "originAccountId": "uuid", "destinationAccountId": "uuid", "amount": 100.00 }`  
-  - Respuesta: `transferId`, `status` (p. ej. `PENDING_RISK`).
+  - Response: `transferId`, `status` (e.g. `PENDING_RISK`).
 
 - **GET** `/api/v1/payments/transfers/{transferId}`  
-  - Detalle del transfer (cuentas, monto, estado, fecha).
+  - Transfer details (accounts, amount, status, date).
 
 ---
 
-## Comandos útiles
+## Useful commands
 
 ### Docker
 
 ```powershell
-# Comprobar que Docker está activo
+# Check Docker is running
 docker info
 
-# Usar daemon expuesto por TCP (Windows)
+# Use daemon exposed over TCP (Windows)
 $env:DOCKER_HOST="tcp://localhost:2375"; docker info
 
-# Listar contenedores en ejecución
+# List running containers
 docker ps
 
-# Ver contextos (p. ej. desktop-linux)
+# List contexts (e.g. desktop-linux)
 docker context ls
 ```
 
 ### Maven
 
 ```powershell
-# Compilar
+# Compile
 mvn clean compile
 
-# Ejecutar todos los tests
+# Run all tests
 mvn test
 
-# Solo test de integración PaymentSagaTest
+# Integration test only PaymentSagaTest
 mvn clean test -Dtest=PaymentSagaTest
 
-# Solo test de contexto
+# Context test only
 mvn test -Dtest=ApplicationTests
 
-# Arrancar la aplicación
+# Start the application
 mvn spring-boot:run
 
-# Empaquetar (sin tests)
+# Package (skip tests)
 mvn clean package -DskipTests
 ```
 
 ### DynamoDB (LocalStack / AWS CLI)
 
-Variables para LocalStack (PowerShell):
+Variables for LocalStack (PowerShell):
 
 ```powershell
 $env:AWS_ACCESS_KEY_ID = "test"
@@ -182,65 +182,65 @@ $env:AWS_DEFAULT_REGION = "us-east-1"
 $env:ENDPOINT = "http://localhost:4566"
 ```
 
-Crear tablas (LocalStack por defecto):
+Create tables (LocalStack default):
 
 ```powershell
 cd nu.core/infra
 .\create-tables.ps1
 ```
 
-Seed de cuentas (Alice, Bob, Carol):
+Seed accounts (Alice, Bob, Carol):
 
 ```powershell
 .\seed-accounts.ps1
 ```
 
-Comandos útiles de DynamoDB (LocalStack):
+Useful DynamoDB commands (LocalStack):
 
 ```powershell
-# Listar tablas
+# List tables
 aws dynamodb list-tables --endpoint-url $env:ENDPOINT --region us-east-1
 
-# Describir tabla de cuentas
+# Describe accounts table
 aws dynamodb describe-table --endpoint-url $env:ENDPOINT --table-name nu-core-payment-accounts
 
-# Describir tabla de transacciones
+# Describe transactions table
 aws dynamodb describe-table --endpoint-url $env:ENDPOINT --table-name nu-core-payment-transactions
 
-# Escanear items de cuentas (ver datos)
+# Scan account items (view data)
 aws dynamodb scan --endpoint-url $env:ENDPOINT --table-name nu-core-payment-accounts
 
-# Obtener una cuenta por id
+# Get an account by id
 aws dynamodb get-item --endpoint-url $env:ENDPOINT --table-name nu-core-payment-accounts `
   --key '{"id":{"S":"11111111-1111-1111-1111-111111111111"}}'
 
-# Escanear transacciones
+# Scan transactions
 aws dynamodb scan --endpoint-url $env:ENDPOINT --table-name nu-core-payment-transactions
 ```
 
-Para **AWS real**, quitar `--endpoint-url` (o usar `$env:ENDPOINT = ""` en los scripts).
+For **real AWS**, omit `--endpoint-url` (or set `$env:ENDPOINT = ""` in scripts).
 
-### Kafka (si tienes Kafka local o en Docker)
+### Kafka (if you have Kafka locally or in Docker)
 
 ```powershell
-# Listar tópicos (ejemplo con herramienta en container)
-docker run --rm -it --network host confluentinc/cp-kafka:7.6.0 kafka-topics --bootstrap-server localhost:29092 --list
+# List topics (example with tool in container)
+docker run --rm -it --network host apache/kafka:3.9.2 /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:29092 --list
 
-# Consumir mensajes de risk-events (ejemplo)
-# (depende de tu instalación; aquí se asume kafka-console-consumer disponible)
+# Consume messages from risk-events (example)
+# (depends on your setup; assumes kafka-console-consumer is available)
 kafka-console-consumer --bootstrap-server localhost:29092 --topic risk-events --from-beginning
 ```
 
-### API y salud (curl / PowerShell)
+### API and health (curl / PowerShell)
 
 ```powershell
 # Health
 Invoke-RestMethod -Uri "http://localhost:8080/actuator/health" | ConvertTo-Json
 
-# Prometheus metrics (fragmento)
+# Prometheus metrics (snippet)
 Invoke-WebRequest -Uri "http://localhost:8080/actuator/prometheus" -UseBasicParsing | Select-Object -ExpandProperty Content
 
-# POST transfer (ejemplo con cuentas del seed)
+# POST transfer (example with seed accounts)
 $body = @{
   originAccountId      = "11111111-1111-1111-1111-111111111111"
   destinationAccountId = "22222222-2222-2222-2222-222222222222"
@@ -249,9 +249,9 @@ $body = @{
 Invoke-RestMethod -Uri "http://localhost:8080/api/v1/payments/transfer" -Method Post -Body $body -ContentType "application/json"
 ```
 
-### Testcontainers (configuración local)
+### Testcontainers (local configuration)
 
-Archivo **`~/.testcontainers.properties`** (para que los tests usen Docker por TCP en Windows):
+File **`~/.testcontainers.properties`** (so tests use Docker over TCP on Windows):
 
 ```properties
 docker.host=tcp://localhost:2375
@@ -260,10 +260,10 @@ docker.client.strategy=org.testcontainers.dockerclient.EnvironmentAndSystemPrope
 
 ---
 
-## Estructura del proyecto
+## Project structure
 
-- **`src/main/java`**: aplicación (hexagonal: application, domain, infrastructure).
-- **`src/main/resources`**: `application.yml`, metadata de configuración.
-- **`src/test/java`**: tests; `com.haleluque.nu.core.payment.AbstractIntegrationTest` y `PaymentSagaTest`.
-- **`infra/`**: scripts PowerShell para crear tablas DynamoDB y seed de cuentas (LocalStack).
-- **`docs/`**: documentación adicional (p. ej. tests de integración).
+- **`src/main/java`**: application (hexagonal: application, domain, infrastructure).
+- **`src/main/resources`**: `application.yml`, configuration metadata.
+- **`src/test/java`**: tests; `com.haleluque.nu.core.payment.AbstractIntegrationTest` and `PaymentSagaTest`.
+- **`infra/`**: PowerShell scripts to create DynamoDB tables and seed accounts (LocalStack).
+- **`docs/`**: additional documentation (e.g. integration tests).

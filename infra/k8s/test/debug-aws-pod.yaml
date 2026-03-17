@@ -1,0 +1,19 @@
+# Temporary debug pod for running AWS CLI commands inside the cluster.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: aws-cli-debug
+  namespace: nucore-lab
+spec:
+  restartPolicy: Never
+  containers:
+    - name: aws-cli
+      image: amazon/aws-cli:2.21.0
+      command: ["sleep", "3600"]
+      env:
+        - name: AWS_ACCESS_KEY_ID
+          value: "test"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "test"
+        - name: AWS_DEFAULT_REGION
+          value: "us-east-1"

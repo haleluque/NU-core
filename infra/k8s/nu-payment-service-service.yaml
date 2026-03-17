@@ -1,10 +1,9 @@
-# Service ClusterIP (internal communication) + NodePort for external access (Minikube).
-# For Minikube: minikube service nu-payment-service --url
+# Service ClusterIP (internal communication) + NodePort for external access
 apiVersion: v1
 kind: Service
 metadata:
   name: nu-payment-service
-  namespace: default
+  namespace: nucore-lab
   labels:
     app: nu-payment-service
     app.kubernetes.io/name: nu-payment-service

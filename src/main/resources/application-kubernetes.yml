@@ -1,3 +1,6 @@
+# Configuration for execution within the Kubernetes cluster (nucore-lab).
+# Activated with spring.profiles.active=kubernetes (defined in the ConfigMap of the deployment).
+# Includes the same properties as application.yml; only Kafka and DynamoDB (services in the cluster) change.
 server:
   port: 8080
 
@@ -16,8 +19,7 @@ spring:
   application:
     name: nu.core
   kafka:
-    # Port 29092 = EXTERNAL listener (host). Containers use kafka:9092
-    bootstrap-servers: localhost:29092
+    bootstrap-servers: kafka.nucore-lab.svc.cluster.local:9092
     consumer:
       group-id: nu-core-payment
       auto-offset-reset: latest
@@ -36,11 +38,10 @@ app:
       payments-processed-total: payments.processed.total
       payments-compensated-total: payments.compensated.total
 
-# LocalStack (DynamoDB): default values for LOCAL environment (docker-compose / host).
-# In Kubernetes, the "kubernetes" profile and application-kubernetes.yml are used (LocalStack in the cluster).
+# LocalStack (DynamoDB) in the cluster: service localstack:4566 (HTTP; USE_SSL=0 in k8s-infrastructure)
 aws:
   region: us-east-1
   dynamodb:
-    endpoint: http://localhost:4566
+    endpoint: http://localstack:4566
     access-key-id: test
     secret-access-key: test

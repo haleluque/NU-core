@@ -1,8 +1,12 @@
 package com.haleluque.nu.core.payment.infrastructure.config;
 
+import com.haleluque.nu.core.payment.application.port.in.ListAccountsPort;
+import com.haleluque.nu.core.payment.application.port.in.SeedAccountsPort;
+import com.haleluque.nu.core.payment.application.port.in.TransferPort;
 import com.haleluque.nu.core.payment.application.port.out.AccountRepository;
 import com.haleluque.nu.core.payment.application.port.out.TransactionRepository;
-import com.haleluque.nu.core.payment.application.port.in.TransferPort;
+import com.haleluque.nu.core.payment.application.usecase.ListAccountsUseCase;
+import com.haleluque.nu.core.payment.application.usecase.SeedAccountsUseCase;
 import com.haleluque.nu.core.payment.application.usecase.TransferUseCase;
 import com.haleluque.nu.core.payment.domain.service.TransferService;
 import com.haleluque.nu.core.payment.infrastructure.adapter.output.messaging.PaymentEventProducer;
@@ -21,6 +25,16 @@ public class PaymentConfig {
     @Bean
     public TransferService transferService(AccountRepository accountRepository) {
         return new TransferService(accountRepository);
+    }
+
+    @Bean
+    public SeedAccountsPort seedAccountsPort(AccountRepository accountRepository) {
+        return new SeedAccountsUseCase(accountRepository);
+    }
+
+    @Bean
+    public ListAccountsPort listAccountsPort(AccountRepository accountRepository) {
+        return new ListAccountsUseCase(accountRepository);
     }
 
     @Bean

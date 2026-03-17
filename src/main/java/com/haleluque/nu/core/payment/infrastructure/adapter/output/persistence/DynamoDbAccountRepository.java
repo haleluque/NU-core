@@ -6,11 +6,14 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Output adapter: DynamoDB implementation of AccountRepository.
@@ -41,6 +44,14 @@ public class DynamoDbAccountRepository implements AccountRepository {
         }
 
         return Optional.of(mapToAccount(response.item()));
+    }
+
+    @Override
+    public List<Account> findAll() {
+        var response = dynamoDbClient.scan(ScanRequest.builder().tableName(TABLE_NAME).build());
+        return response.items().stream()
+                .map(DynamoDbAccountRepository::mapToAccount)
+                .collect(Collectors.toList());
     }
 
     @Override

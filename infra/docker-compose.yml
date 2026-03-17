@@ -1,5 +1,5 @@
 services:
-  # Simulador de AWS (DynamoDB)
+  # AWS Simulator (DynamoDB)
   localstack:
     image: localstack/localstack
     ports:
@@ -8,37 +8,35 @@ services:
       - SERVICES=dynamodb
       - DEFAULT_REGION=us-east-1
 
-  # El corazón de la mensajería (Kafka)
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.3.0
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-
+  # Kafka (Apache Kafka KRaft mode)
   kafka:
-    image: confluentinc/cp-kafka:7.3.0
-    depends_on:
-      - zookeeper
+    image: apache/kafka:3.9.2
     ports:
       - "9092:9092"
+      - "9093:9093"
       - "29092:29092"
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      # Interno: otros contenedores (Kafka UI) usan kafka:9092
-      # Externo: apps en el host usan localhost:29092
-      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:29092
-      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      # Internal: other containers (like Kafka UI) use kafka:9092
+      # External: apps on the host use localhost:29092
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
     healthcheck:
-      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10
       start_period: 15s
 
-  # Interfaz visual para ver tus mensajes de Kafka
+  # Kafka UI (for visualizing Kafka messages)
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     ports:

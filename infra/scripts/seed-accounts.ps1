@@ -1,7 +1,18 @@
 # --- Configuration ---
-$ENDPOINT = "http://localhost:4566"
+# Usage: .\seed-accounts.ps1
+#        .\seed-accounts.ps1 -Endpoint "https://localhost:4566"
+#        .\seed-accounts.ps1 -Endpoint $env:ENDPOINT
+#
+# From host with K8s: first run: kubectl port-forward -n nucore-lab svc/localstack 4566:4566
+# Then: $env:ENDPOINT = "https://localhost:4566"; .\create-tables.ps1; .\seed-accounts.ps1
+param(
+    [string]$Endpoint = $env:ENDPOINT
+)
+if (-not $Endpoint) { $Endpoint = "https://localhost:4566" }
+$ENDPOINT = $Endpoint
 $REGION = "us-east-1"
 $TABLE_NAME = "nu-core-payment-accounts"
+$sslArgs = if ($Endpoint -match "^https://") { @("--no-verify-ssl") } else { @() }
 
 # LocalStack: dummy credentials so AWS CLI does not ask for login
 $env:AWS_ACCESS_KEY_ID = "test"
@@ -18,7 +29,7 @@ function Put-AccountItem($id, $customerName, $balance) {
     } | ConvertTo-Json -Compress
 
     $escapedJson = $itemJson.Replace('"', '\"')
-    aws dynamodb put-item --table-name $TABLE_NAME --endpoint-url=$ENDPOINT --region=$REGION --item $escapedJson
+    & aws dynamodb put-item --table-name $TABLE_NAME --endpoint-url=$ENDPOINT --region=$REGION --item $escapedJson @sslArgs
     if ($LASTEXITCODE -ne 0) { Write-Warning "Put-item failed: id=$id" }
 }
 

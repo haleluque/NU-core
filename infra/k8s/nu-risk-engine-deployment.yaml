@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: nu-risk-engine
-  namespace: default
+  namespace: nucore-lab
   labels:
     app: nu-risk-engine
     app.kubernetes.io/name: nu-risk-engine
@@ -49,18 +49,18 @@ spec:
             httpGet:
               path: /actuator/health/liveness
               port: http
-            initialDelaySeconds: 60
+            initialDelaySeconds: 90
             periodSeconds: 10
             timeoutSeconds: 5
-            failureThreshold: 3
+            failureThreshold: 5
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: http
-            initialDelaySeconds: 30
+            initialDelaySeconds: 45
             periodSeconds: 5
-            timeoutSeconds: 3
-            failureThreshold: 3
+            timeoutSeconds: 5
+            failureThreshold: 6
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: false
