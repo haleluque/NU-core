@@ -37,34 +37,27 @@ spec:
           env:
             - name: SERVICES
               value: "dynamodb"
+            # DEBUG=1 plus DynamoDB Local (JVM) easily exceeds 512Mi and the pod gets OOMKilled (-9).
             - name: DEBUG
-              value: "1"
-            - name: GATEWAY_LISTEN
-              value: "0.0.0.0:4566"
-            - name: USE_SSL
               value: "0"
-            - name: HOSTNAME_EXTERNAL
-              value: "localstack"
             - name: LOCALSTACK_HOST
               value: "0.0.0.0"
-            # En K8s suele usarse modo 'lite'; descomentar si LocalStack lo requiere
-            # - name: DOCKER_HOST
-            #   value: "unix:///var/run/docker.sock"
           resources:
             requests:
-              memory: "256Mi"
+              memory: "512Mi"
               cpu: "250m"
             limits:
-              memory: "512Mi"
-              cpu: "500m"
+              memory: "1536Mi"
+              cpu: "1000m"
           readinessProbe:
             httpGet:
               path: /_localstack/health
-              port: 33773
-            initialDelaySeconds: 15
+              port: 4566
+              scheme: HTTP
+            initialDelaySeconds: 20
             periodSeconds: 5
-            timeoutSeconds: 3
-            failureThreshold: 24
+            timeoutSeconds: 5
+            failureThreshold: 30
 ---
 apiVersion: v1
 kind: Service
@@ -81,8 +74,7 @@ spec:
   ports:
     - name: gateway
       port: 4566
-      # LocalStack 3.0 sometimes binds to a dynamic port; use the same for targetPort if 4566 not used in container
-      targetPort: 33773
+      targetPort: 4566
       protocol: TCP
 ---
 # -----------------------------------------------------------------------------

@@ -12,7 +12,7 @@ data:
   SPRING_PROFILES_ACTIVE: "kubernetes"
   # Kafka (service from k8s-infrastructure.yaml: kafka:9092 in nucore-lab namespace)
   SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka.nucore-lab.svc.cluster.local:9092"
-  # LocalStack / DynamoDB — service name in k8s-infrastructure.yaml (port 4566)
+  # LocalStack / DynamoDB — Service port 4566 (maps to container 33773; see k8s-infrastructure.yaml)
   # Same namespace: use "localstack" or "localstack.nucore-lab.svc.cluster.local"
   AWS_DYNAMODB_ENDPOINT: "http://localstack:4566"
   AWS_REGION: "us-east-1"

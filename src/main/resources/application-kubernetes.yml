@@ -38,7 +38,8 @@ app:
       payments-processed-total: payments.processed.total
       payments-compensated-total: payments.compensated.total
 
-# LocalStack (DynamoDB) in the cluster: service localstack:4566 (HTTP; USE_SSL=0 in k8s-infrastructure)
+# LocalStack (DynamoDB): use the Kubernetes Service port (4566 → targetPort 33773 on the pod).
+# Do not use 33773 here — that is only the container port; clients must hit Service port 4566.
 aws:
   region: us-east-1
   dynamodb:

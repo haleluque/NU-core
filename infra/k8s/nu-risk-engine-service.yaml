@@ -1,4 +1,4 @@
-# Service ClusterIP: internal communication only within the cluster.
+# Service NodePort for external access from the host.
 apiVersion: v1
 kind: Service
 metadata:
@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/name: nu-risk-engine
     app.kubernetes.io/part-of: nu-core
 spec:
-  type: ClusterIP
+  type: NodePort
   selector:
     app: nu-risk-engine
   ports:
@@ -17,4 +17,5 @@ spec:
       port: 8081
       targetPort: http
       protocol: TCP
+      nodePort: 30081
   sessionAffinity: None
